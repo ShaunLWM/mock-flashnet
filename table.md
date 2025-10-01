@@ -1,156 +1,174 @@
 # FlashNet Multi-Hop Swap Routes
 
-This document outlines the different multi-hop routing strategies available in the FlashNet AMM system.
+This document outlines the simplified pool structure and routing strategies for the FlashNet AMM mock server.
 
-## Route Priority Order
+## Pool Structure Overview
 
-As per ENG-8047, routes are prioritized as follows:
-1. **Direct route** (if sufficient liquidity)
-2. **BTC intermediate route** (prioritized)
-3. **USDB intermediate route** (fallback)
-4. **BTC → USDB bridge routes** (for maximum coverage)
+The system uses **6 pools** designed to create natural routing scenarios with varying liquidity and fees:
+
+1. **BTC/USDB Bridge** - Core infrastructure pool
+2. **SNOW/BTC** - High liquidity popular meme coin
+3. **SNOW/USDB** - Alternative route for SNOW
+4. **BRUH/BTC** - Low liquidity, BTC-only meme coin
+5. **FLASHSPARK/USDB** - Low liquidity, USDB-only meme coin
+6. **XSPARK/USDB** - Dead coin with terrible fees
 
 ## Available Tokens
 
-| Token | Address |
-|-------|---------|
-| BTC | `020202020202020202020202020202020202020202020202020202020202020202` |
-| USDB | `btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87` |
-| Snowflake | `btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws` |
-| Flashspark | `btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553` |
-| Sparkinu | `btkn1c4zw25t8lkr0d3as6xt75sdhrz08dpzw2p9c2ddhajgl4gzglevqj0gcqj` |
-| XSpark | `btkn1dywglzsxyaxx69u4dchyz9vnt4gpmp0w26f3n5st2rslusv4kv7szrrwzm` |
-| Ever Value Coin | `btkn1k9s493793jtuxu22cx2ecqny9r4l06uy2e97tu267c9p2vhfyegq93gmy2` |
-| BRUH | `btkn18tq8zfgtvnmg0wct0hvwzpkfs0scse8edef4ten39schhfhrksus7hlm8a` |
+| Token | Price (USD) | Address |
+|-------|-------------|---------|
+| BTC | $100,000 | `020202020202020202020202020202020202020202020202020202020202020202` |
+| USDB | $1.00 | `btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87` |
+| SNOW (Snowflake) | $0.10 | `btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws` |
+| BRUH | $0.05 | `btkn18tq8zfgtvnmg0wct0hvwzpkfs0scse8edef4ten39schhfhrksus7hlm8a` |
+| FLASHSPARK | $0.03 | `btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553` |
+| XSPARK | $0.01 | `btkn1dywglzsxyaxx69u4dchyz9vnt4gpmp0w26f3n5st2rslusv4kv7szrrwzm` |
 
-## 1. Direct Routes (1-hop)
+## Pool Details
 
-| Route | From Token | To Token | Pool ID | Liquidity | TVL |
-|-------|------------|----------|---------|-----------|-----|
-| Sparkinu ↔ XSpark | Sparkinu | XSpark | `pool_sparkinu_xspark_direct` | High | 75B |
-| Snowflake ↔ Ever Value Coin | Snowflake | Ever Value Coin | `pool_snowflake_evervalue_direct` | Medium | 100B |
-| Flashspark ↔ Sparkinu | Flashspark | Sparkinu | `pool_flashspark_sparkinu_direct` | Medium | 60B |
-| BRUH ↔ Snowflake | BRUH | Snowflake | `pool_bruh_snowflake_direct` | Medium | 60B |
-| BRUH ↔ Sparkinu | BRUH | Sparkinu | `pool_bruh_sparkinu_direct` | Lower | 100B |
+| Pool ID | Asset A | Asset B | Liquidity per Side | TVL | Total Fees | Description |
+|---------|---------|---------|-------------------|-----|------------|-------------|
+| `bridge_btc_usdb` | BTC | USDB | 100 BTC / 10M USDB | $20M | 0.15% | Ultra-low fees, near 1:1 swaps |
+| `pool_snow_btc` | SNOW | BTC | $500k / $500k | $1M | 2.7% | High liquidity, popular pair |
+| `pool_snow_usdb` | SNOW | USDB | $500k / $500k | $1M | 2.7% | Alternative SNOW route |
+| `pool_bruh_btc` | BRUH | BTC | $50k / $50k | $100k | 5.5% | Low liquidity, BTC-only |
+| `pool_flashspark_usdb` | FLASHSPARK | USDB | $30k / $30k | $60k | 5.5% | Low liquidity, USDB-only |
+| `pool_xspark_usdb` | XSPARK | USDB | $5k / $5k | $10k | 12% | Dead coin, very high fees |
 
-## 2. BTC Intermediate Routes (2-hop, preferred)
+## Routing Scenarios
 
-| Route | From Token | Via Token | To Token | Pool 1 | Pool 2 | Description |
-|-------|------------|-----------|----------|--------|--------|-------------|
-| Snowflake → XSpark | Snowflake | BTC | XSpark | `pool_snowflake_btc` | `pool_xspark_btc` (reversed) | High liquidity BTC route |
-| Ever Value Coin → Sparkinu | Ever Value Coin | BTC | Sparkinu | `pool_evervalue_btc` | `pool_sparkinu_btc` (reversed) | Medium to high liquidity |
-| Flashspark → XSpark | Flashspark | BTC | XSpark | `pool_flashspark_btc` | `pool_xspark_btc` (reversed) | High liquidity route |
-| Snowflake → Sparkinu | Snowflake | BTC | Sparkinu | `pool_snowflake_btc` | `pool_sparkinu_btc` (reversed) | High liquidity route |
-| Flashspark → Snowflake | Flashspark | BTC | Snowflake | `pool_flashspark_btc` | `pool_snowflake_btc` (reversed) | High liquidity route |
-| XSpark → Ever Value Coin | XSpark | BTC | Ever Value Coin | `pool_xspark_btc` | `pool_evervalue_btc` (reversed) | High to medium liquidity |
-| BRUH → Sparkinu | BRUH | BTC | Sparkinu | `pool_bruh_btc` | `pool_sparkinu_btc` (reversed) | High liquidity route |
-| BRUH → XSpark | BRUH | BTC | XSpark | `pool_bruh_btc` | `pool_xspark_btc` (reversed) | High liquidity route |
+### 1. Direct Routes (1-hop) ✅ Efficient
 
-## 3. USDB Intermediate Routes (2-hop, alternative)
+| Route | Pool | Expected Output | Slippage |
+|-------|------|----------------|----------|
+| BTC ↔ USDB | `bridge_btc_usdb` | ~99% (1:1 ratio) | ~1.14% |
+| SNOW ↔ BTC | `pool_snow_btc` | Good | ~18% for large swaps |
+| SNOW ↔ USDB | `pool_snow_usdb` | Good | ~18% for large swaps |
+| BRUH ↔ BTC | `pool_bruh_btc` | Low liquidity | High slippage |
+| FLASHSPARK ↔ USDB | `pool_flashspark_usdb` | Low liquidity | High slippage |
 
-| Route | From Token | Via Token | To Token | Pool 1 | Pool 2 | Description |
-|-------|------------|-----------|----------|--------|--------|-------------|
-| Snowflake → Flashspark | Snowflake | USDB | Flashspark | `pool_snowflake_usdb` | `pool_flashspark_usdb` (reversed) | Alternative to BTC route |
-| XSpark → Ever Value Coin | XSpark | USDB | Ever Value Coin | `pool_xspark_usdb` | `pool_evervalue_usdb` (reversed) | Alternative route |
-| Snowflake → XSpark | Snowflake | USDB | XSpark | `pool_snowflake_usdb` | `pool_xspark_usdb` (reversed) | Lower priority alternative |
-| Flashspark → Ever Value Coin | Flashspark | USDB | Ever Value Coin | `pool_flashspark_usdb` | `pool_evervalue_usdb` (reversed) | Alternative route |
-| BRUH → Snowflake | BRUH | USDB | Snowflake | `pool_bruh_usdb` | `pool_snowflake_usdb` (reversed) | Alternative route |
-| BRUH → Flashspark | BRUH | USDB | Flashspark | `pool_bruh_usdb` | `pool_flashspark_usdb` (reversed) | Alternative route |
+### 2. Two-Hop Routes (2-hop) ⚠️ Medium Efficiency
 
-## 4. Long Routes via BTC → USDB Bridge (3-hop)
+| Route | Hops | Description |
+|-------|------|-------------|
+| SNOW → BRUH | SNOW → BTC → BRUH | Popular to low-liquidity coin |
+| SNOW → FLASHSPARK | SNOW → USDB → FLASHSPARK | Alternative routing |
+| BRUH → SNOW | BRUH → BTC → SNOW | Low to high liquidity |
+| FLASHSPARK → SNOW | FLASHSPARK → USDB → SNOW | USDB-routed swap |
 
-| Route | From Token | Via Tokens | To Token | Pool 1 | Bridge Pool | Pool 3 | Description |
-|-------|------------|------------|----------|--------|-------------|--------|-------------|
-| Snowflake → Ever Value Coin | Snowflake | BTC → USDB | Ever Value Coin | `pool_snowflake_btc` | `bridge_btc_usdb_primary` | `pool_evervalue_usdb` (reversed) | Maximum coverage route |
-| Sparkinu → Flashspark | Sparkinu | BTC → USDB | Flashspark | `pool_sparkinu_btc` | `bridge_btc_usdb_primary` | `pool_flashspark_usdb` (reversed) | Complex routing |
-| XSpark → Snowflake | XSpark | BTC → USDB | Snowflake | `pool_xspark_btc` | `bridge_btc_usdb_primary` | `pool_snowflake_usdb` (reversed) | Long route option |
-| Ever Value Coin → Flashspark | Ever Value Coin | BTC → USDB | Flashspark | `pool_evervalue_btc` | `bridge_btc_usdb_primary` | `pool_flashspark_usdb` (reversed) | Maximum coverage |
-| BRUH → Ever Value Coin | BRUH | BTC → USDB | Ever Value Coin | `pool_bruh_btc` | `bridge_btc_usdb_primary` | `pool_evervalue_usdb` (reversed) | Complex routing |
+**Example: SNOW → BRUH**
+- 1M SNOW ($100k) input
+- Gets ~81.34% price impact
+- Returns ~606k BRUH tokens
 
-## Bridge Pools
+### 3. Three-Hop Routes (3-hop) ❌ Worst Case
 
-| Pool ID | Asset A | Asset B | TVL | Description |
-|---------|---------|---------|-----|-------------|
-| `bridge_btc_usdb_primary` | BTC | USDB | 600B | Primary bridge (1 BTC = 600 USDB) |
-| `bridge_btc_usdb_alt` | BTC | USDB | 310B | Alternative bridge (1 BTC = 620 USDB) |
+| Route | Hops | Expected Output | Price Impact |
+|-------|------|----------------|--------------|
+| **BRUH → FLASHSPARK** | BRUH → BTC → USDB → FLASHSPARK | **~43% of expected** | **~98%** |
+| FLASHSPARK → BRUH | FLASHSPARK → USDB → BTC → BRUH | ~43% of expected | ~98% |
+| BRUH → XSPARK | BRUH → BTC → USDB → XSPARK | Terrible | Near 100% |
 
-## Route Selection Logic
+**Example: BRUH → FLASHSPARK (Worst Case)**
+- 1M BRUH ($50k) input
+- Goes through 3 pools with increasing fees
+- Gets 98.18% price impact
+- Returns only ~432k FLASHSPARK (expected ~1.67M)
+- **This is intentionally the worst possible route**
 
-The routing algorithm follows this priority:
+## Route Selection Rules
 
-1. **Check Direct Routes**: Look for 1-hop direct pools with sufficient liquidity
-2. **Try BTC Routes**: Use BTC as intermediate token (2-hop)
-3. **Fallback to USDB Routes**: Use USDB as intermediate token (2-hop)
-4. **Bridge Routes**: Use BTC → USDB bridge for maximum coverage (3-hop)
+Since each token only pairs with specific assets, routing is deterministic:
 
-## Atomic Execution
+1. **BRUH** can only go through **BTC** first
+2. **FLASHSPARK** can only go through **USDB** first
+3. **XSPARK** can only go through **USDB** first
+4. **SNOW** can choose either **BTC** or **USDB** (both available)
+5. **BTC ↔ USDB** swaps are direct and efficient
 
-- All multi-hop routes are executed atomically
-- Either all hops succeed or the entire swap reverts
-- Slippage protection applied across the entire route
-- Configurable `maxRouteSlippageBps` parameter
+## AMM Calculation Details
 
-## Special Cases
+All swaps use **constant product formula** (x·y=k):
 
-| Pool Type | Pool ID | Description |
-|-----------|---------|-------------|
-| Low Liquidity | `pool_sparkinu_flashspark_lowliq` | For testing high slippage scenarios |
-| Dead Pool | `dead_pool_xspark_evervalue` | Zero liquidity pool |
-| High Fee Pool | `expensive_snowflake_flashspark` | 3% total fees for expensive routing |
-| Dust Pool | `dust_pool_minimal_spark` | Minimal amounts for edge case testing |
-
-## Example Multi-Hop Swap Requests
-
-### 2-Hop BTC Route (Snowflake → BTC → Sparkinu)
-```json
-{
-  "hops": [
-    {
-      "poolPubkey": "pool_snowflake_btc",
-      "inputAsset": "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws",
-      "outputAsset": "020202020202020202020202020202020202020202020202020202020202020202",
-      "lpFeeBps": 300,
-      "hostFeeBps": 25
-    },
-    {
-      "poolPubkey": "pool_sparkinu_btc_reverse",
-      "inputAsset": "020202020202020202020202020202020202020202020202020202020202020202",
-      "outputAsset": "btkn1c4zw25t8lkr0d3as6xt75sdhrz08dpzw2p9c2ddhajgl4gzglevqj0gcqj",
-      "lpFeeBps": 250,
-      "hostFeeBps": 20
-    }
-  ],
-  "amountIn": "5000000000",
-  "maxRouteSlippageBps": 1000
-}
+```
+For swap A → B:
+1. Deduct fees: amountAfterFees = amountIn × (1 - feeBps/10000)
+2. Calculate k: k = reserveA × reserveB
+3. New reserveA: newReserveA = reserveA + amountAfterFees
+4. New reserveB: newReserveB = k / newReserveA
+5. Output: amountOut = reserveB - newReserveB
+6. Price impact: ((spotPrice - executionPrice) / spotPrice) × 100
 ```
 
-### 3-Hop Bridge Route (Sparkinu → BTC → USDB → Flashspark)
+## Example Swap Requests
+
+### 1. Direct BTC → USDB (Best Case)
 ```json
 {
   "hops": [
     {
-      "poolPubkey": "pool_sparkinu_btc",
-      "inputAsset": "btkn1c4zw25t8lkr0d3as6xt75sdhrz08dpzw2p9c2ddhajgl4gzglevqj0gcqj",
-      "outputAsset": "020202020202020202020202020202020202020202020202020202020202020202",
-      "lpFeeBps": 250,
-      "hostFeeBps": 20
-    },
-    {
-      "poolPubkey": "bridge_btc_usdb_primary",
-      "inputAsset": "020202020202020202020202020202020202020202020202020202020202020202",
-      "outputAsset": "btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87",
-      "lpFeeBps": 250,
-      "hostFeeBps": 20
-    },
-    {
-      "poolPubkey": "pool_flashspark_usdb_reverse",
-      "inputAsset": "btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87",
-      "outputAsset": "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553",
-      "lpFeeBps": 300,
-      "hostFeeBps": 25
+      "assetInAddress": "020202020202020202020202020202020202020202020202020202020202020202",
+      "assetOutAddress": "btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87",
+      "poolId": "bridge_btc_usdb"
     }
   ],
-  "amountIn": "1000000000",
-  "maxRouteSlippageBps": 1500
+  "amountIn": "100000000",
+  "maxRouteSlippageBps": "100"
 }
+```
+**Result**: 1 BTC → ~98,862 USDB (~99% efficiency)
+
+### 2. Two-Hop SNOW → BRUH
+```json
+{
+  "hops": [
+    {
+      "assetInAddress": "btkn1f0wpf28xhs6sswxkthx9fzrv2x9476yk95wlucp4sfuqmxnu8zesv2gsws",
+      "assetOutAddress": "020202020202020202020202020202020202020202020202020202020202020202",
+      "poolId": "pool_snow_btc"
+    },
+    {
+      "assetInAddress": "020202020202020202020202020202020202020202020202020202020202020202",
+      "assetOutAddress": "btkn18tq8zfgtvnmg0wct0hvwzpkfs0scse8edef4ten39schhfhrksus7hlm8a",
+      "poolId": "pool_bruh_btc"
+    }
+  ],
+  "amountIn": "100000000000000",
+  "maxRouteSlippageBps": "1000"
+}
+```
+**Result**: 1M SNOW → ~606k BRUH (~81% price impact)
+
+### 3. Three-Hop BRUH → FLASHSPARK (Worst Case)
+```json
+{
+  "hops": [
+    {
+      "assetInAddress": "btkn18tq8zfgtvnmg0wct0hvwzpkfs0scse8edef4ten39schhfhrksus7hlm8a",
+      "assetOutAddress": "020202020202020202020202020202020202020202020202020202020202020202",
+      "poolId": "pool_bruh_btc"
+    },
+    {
+      "assetInAddress": "020202020202020202020202020202020202020202020202020202020202020202",
+      "assetOutAddress": "btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87",
+      "poolId": "bridge_btc_usdb"
+    },
+    {
+      "assetInAddress": "btkn1xgrvjwey5ngcagvap2dzzvsy4uk8ua9x69k82dwvt5e7ef9drm9qztux87",
+      "assetOutAddress": "btkn1daywtenlww42njymqzyegvcwuy3p9f26zknme0srxa7tagewvuys86h553",
+      "poolId": "pool_flashspark_usdb"
+    }
+  ],
+  "amountIn": "100000000000000",
+  "maxRouteSlippageBps": "2000"
+}
+```
+**Result**: 1M BRUH → ~432k FLASHSPARK (~98% price impact, only 43% output)
+
+## Key Insights
+
+- **BTC/USDB bridge** enables cross-ecosystem routing
+- **High liquidity** (SNOW pools) = low slippage
+- **Low liquidity** (BRUH, FLASHSPARK) = high slippage
+- **Multi-hop routes** compound fees and slippage
+- **BRUH → FLASHSPARK** demonstrates worst-case scenario intentionally
